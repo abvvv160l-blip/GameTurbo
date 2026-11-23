@@ -16,10 +16,54 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # ---- Lõi Rust (libgtcore.so) ----
+      # Nếu bước Rust lỗi thì APK vẫn được build, app tự dùng lõi Kotlin dự phòng.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Build Rust core
+        id: rust
+        continue-on-error: true
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          echo "NDK: $ANDROID_NDK_HOME"
+          command -v cargo-ndk || cargo install cargo-ndk --locked
+          cd rust
+          cargo ndk -t arm64-v8a -t armeabi-v7a -P 23 -o ../app/src/main/jniLibs build --release
+          ls -la ../app/src/main/jniLibs/*
+
+      - name: Rust core status
+        run: |
+          if [ "${{ steps.rust.outcome }}" = "success" ]; then
+            echo "Lõi Rust: OK" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Lõi Rust: LỖI (APK vẫn build, dùng lõi Kotlin dự phòng)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # ---- APK ----
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew assembleDebug --console=plain 2>&1 | tee build.log
+
+      # Nếu build lỗi: ghi các dòng lỗi vào trang tóm tắt của lần chạy để đọc ngay trên điện thoại
+      - name: Show compile errors
+        if: failure()
+        run: |
+          {
+            echo '### Lỗi biên dịch (chụp màn hình phần này gửi để sửa)'
+            echo '```'
+            grep -E '^e: |error:|What went wrong|Execution failed' -A3 build.log | head -90
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:

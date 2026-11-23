@@ -5,3 +5,5 @@ local.properties
 .idea/
 .DS_Store
 *.apk
+rust/target/
+app/src/main/jniLibs/

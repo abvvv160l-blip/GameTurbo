@@ -145,6 +145,26 @@ class ShizukuShell(context: Context) {
         }
     }
 
+    /** Đọc nhiều file hệ thống bằng quyền shell trong một lần gọi. Trả "" nếu chưa sẵn sàng. */
+    suspend fun readMany(keys: String): String = withContext(Dispatchers.IO) {
+        val s = service ?: return@withContext ""
+        try {
+            s.readMany(keys) ?: ""
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
+    val isReady: Boolean get() = _status.value == ShizukuStatus.READY
+
+    /** Shizuku đang chạy bằng root (uid 0) thì lệnh gửi qua exec() cũng có quyền root. */
+    val isRootMode: Boolean
+        get() = try {
+            Shizuku.pingBinder() && Shizuku.getUid() == 0
+        } catch (_: Throwable) {
+            false
+        }
+
     private companion object {
         const val REQUEST_CODE = 1001
     }

@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Game Turbo</string>
+    <string name="notif_channel">Game Turbo</string>
+    <string name="notif_title">Game Turbo đang chạy</string>
+    <string name="notif_text">HUD và theo dõi game đang bật</string>
+    <string name="notif_stop">Dừng</string>
 </resources>

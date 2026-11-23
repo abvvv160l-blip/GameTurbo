@@ -2,5 +2,7 @@
 <resources>
     <style name="Theme.GameTurbo" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowFullscreen">false</item>
     </style>
 </resources>

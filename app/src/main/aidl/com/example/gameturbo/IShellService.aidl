@@ -6,4 +6,7 @@ interface IShellService {
 
     // Chạy lệnh shell, trả về "<mã thoát>\n<kết quả>"
     String exec(String command) = 1;
+
+    // Đọc nhiều file hệ thống trong một lần (không mở tiến trình con), xem core/SysReader.kt
+    String readMany(String keys) = 2;
 }

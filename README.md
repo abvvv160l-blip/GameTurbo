@@ -1,61 +1,74 @@
-# Game Turbo (Android, Kotlin + Jetpack Compose + Shizuku)
+# Game Turbo
 
-App tăng hiệu năng game **không cần root**, chạy lệnh hệ thống qua [Shizuku](https://shizuku.rikka.app/).
+App Android tăng hiệu năng game, giao diện kính lỏng (liquid glass) nằm ngang. **Không cần root**: chạy lệnh hệ thống qua [Shizuku](https://shizuku.rikka.app/). Có root thì mở thêm khoá xung CPU/GPU.
+
+Hỗ trợ Android 6 đến 15 (minSdk 23). Viết bằng Kotlin + Jetpack Compose, phần tính toán nặng bằng **Rust** (có bản Kotlin dự phòng).
 
 ## Tính năng
 
-| Tính năng | Lệnh dùng | Yêu cầu |
+- **Bong bóng nổi trong game** → chạm mở menu kính: đổi chế độ, bật/tắt HUD, khoá xung, dọn app nền. Chạm đúp thanh trên của menu để di chuyển, chạm đúp lần nữa để lưu vị trí.
+- **HUD** FPS, GHz, %CPU, %GPU, nhiệt độ: kéo/phóng to được, chạm xuyên qua, chỉnh độ mờ (Android 12+ tối đa 80% để chạm xuyên được).
+- **4 chế độ**: Tiết kiệm pin, Ổn định, Tối thượng, Tùy chỉnh. Độ phân giải và giới hạn FPS đặt riêng cho từng game.
+- **Tối thượng** tự về Ổn định khi CPU/SoC đạt 80 °C (đọc nhiệt độ CPU, không phải pin; không đọc được thì dùng nhiệt độ pin 45 °C). Giao diện đỏ gaming khi bật.
+- **Dọn app nền** khi vào game (tự động hoặc bấm tay), có danh sách app giữ lại.
+- **Cài đặt**: màu chủ đề, độ mờ/màu kính, chất lượng kính (Cao/Thấp/Tắt), nền màu/ảnh/video (video có tiếng riêng), âm thanh nút và hiệu ứng.
+- Nhật ký hoạt động, thời gian chơi từng game, thử tốc độ Rust so với Kotlin.
+
+| Việc | Lệnh | Yêu cầu |
 |---|---|---|
-| Game Mode = Performance cho từng game | `cmd game set --mode performance ...` (dự phòng: `cmd game mode performance`) | Android 12+ |
-| Giảm độ phân giải riêng từng game | `--downscale 0.5 … 0.9` | Android 13+ (theo hiểu biết của mình, cần thử trên máy thật) |
-| Giới hạn FPS riêng từng game | `--fps 30/45/60/90/120` | Android 13+ |
-| Khoá tần số quét tối thiểu | `settings put system min_refresh_rate` | Tuỳ hãng máy |
+| Game Mode (pin / ổn định / hiệu năng) | `cmd game set --mode …` (dự phòng `cmd game mode …`) | Android 12+ |
+| Giảm độ phân giải, giới hạn FPS từng game | `cmd game set --downscale … --fps …` | Android 12/13+ tuỳ hãng |
+| Tần số quét tối thiểu | `settings put system min_refresh_rate` | Tuỳ hãng máy |
 | Hiệu năng cố định | `cmd power set-fixed-performance-mode-enabled` | Chỉ một số máy |
-| Giảm độ phân giải cả màn hình | `wm size`, `wm density` | Mọi máy |
-| Dọn RAM | `am kill-all` | Mọi máy |
-| Hiện nhiệt độ pin và trạng thái nhiệt | `BatteryManager`, `PowerManager` | Không cần Shizuku |
+| Khoá xung CPU/GPU | ghi vào `/sys/.../cpufreq`, `kgsl` | **Cần root** |
+| Dọn app nền | `am kill` / `am force-stop` | Shizuku hoặc root |
 
-**Không làm được:** ép xung CPU/GPU hoặc khóa xung nhịp tối đa. Việc này cần root vì SELinux chặn quyền shell ghi vào `/sys/.../cpufreq`.
+## Rust làm gì, Kotlin làm gì
 
-## Cách build ra file .apk
+| Phần | Ngôn ngữ | Lý do |
+|---|---|---|
+| Tính %CPU, xung, GPU, FPS, nhiệt độ, nhận biết game, lập kế hoạch lệnh, chọn app cần dọn, bảo vệ nhiệt | **Rust** (`rust/`, thư viện `libgtcore.so`) | Xử lý chuỗi/số liệu nhanh, không rác bộ nhớ |
+| Giao diện, cửa sổ nổi, dịch vụ nền, Shizuku, âm thanh | Kotlin | Bắt buộc dùng API Android (Rust không tăng tốc được) |
 
-### Cách 1: Android Studio (dễ nhất)
-1. Cài [Android Studio](https://developer.android.com/studio).
-2. `File > Open` và chọn thư mục `GameTurbo`. Chờ Gradle sync xong (lần đầu tải khá lâu).
-3. Menu `Build > Build Bundle(s) / APK(s) > Build APK(s)`.
-4. File nằm ở `app/build/outputs/apk/debug/app-debug.apk`. Chép sang điện thoại rồi cài.
+Hợp đồng giữa hai bên nằm ở `NATIVE_API.md`. Nếu bước build Rust lỗi hoặc máy không tải được thư viện, app tự dùng `core/KotlinCore.kt` (cùng kết quả, đã kiểm tra byte-by-byte trên kế hoạch lệnh).
 
-Nếu Android Studio đề nghị nâng cấp phiên bản Android Gradle Plugin, cứ chấp nhận.
+## Build ra file .apk bằng GitHub Actions (làm hoàn toàn trên điện thoại)
 
-### Cách 2: GitHub Actions (không cần cài gì)
-1. Tạo repo GitHub và đẩy toàn bộ thư mục này lên nhánh `main`.
-2. Vào tab **Actions > Build APK > Run workflow**.
-3. Khi chạy xong, tải file `GameTurbo-apk` ở phần Artifacts.
+1. Đẩy toàn bộ thư mục này lên repo GitHub (nhánh `main`).
+2. Vào tab **Actions** → **Build APK** → **Run workflow**.
+3. Chờ khoảng 3–8 phút (lần đầu có thêm bước biên dịch Rust).
+4. Mở lần chạy xong → mục **Artifacts** → tải **GameTurbo-apk** → giải nén ra `app-debug.apk` → cài.
+5. Nếu build **lỗi**, mở trang lần chạy đó: phần **Summary** có sẵn khối "Lỗi biên dịch". Chụp màn hình gửi để sửa.
 
-### Cách 3: Dòng lệnh
+Lưu ý: mỗi lần build ra file ký khác chữ ký cũ; nếu báo xung đột khi cài thì gỡ bản cũ rồi cài lại.
+
+### Hoặc dùng Android Studio
+`File > Open` chọn thư mục này, chờ Gradle sync, rồi `Build > Build APK(s)`. Muốn có lõi Rust: cài `cargo-ndk` và chạy `cd rust && cargo ndk -t arm64-v8a -t armeabi-v7a -P 23 -o ../app/src/main/jniLibs build --release` trước.
+
+## Cài Shizuku
+
+1. Cài app Shizuku.
+2. Android 11+: Tùy chọn nhà phát triển → bật **Gỡ lỗi không dây**, mở Shizuku → *Bắt đầu qua gỡ lỗi không dây* (ghép nối theo hướng dẫn trong app Shizuku).
+3. Android 6–10: cần cắm máy tính chạy lệnh ADB mà Shizuku hiển thị, làm lại sau mỗi lần khởi động lại máy.
+4. Mở Game Turbo → chấm trạng thái ở góc trên phải → **Cấp quyền**.
+5. Bật **Theo dõi game** (cần quyền "Hiển thị trên ứng dụng khác").
+
+## Giới hạn cần biết
+
+- Phần mềm này viết khi chưa có máy Android để chạy thử; nhiều thứ phụ thuộc hãng máy (đo FPS qua SurfaceFlinger, đường dẫn đọc GPU, lệnh `cmd game`). Chỗ nào không đọc/áp dụng được app hiện `--` hoặc ghi vào Nhật ký, không báo thành công giả.
+- Khoá xung chỉ có khi có root. Không root thì Tối thượng dùng Game Mode hiệu năng + hiệu năng cố định + tần số quét cao nhất.
+- Nếu app thoát bất ngờ: **Cài đặt → Về app → Lỗi gần nhất → Sao chép** rồi gửi nội dung đó.
+
+## Cấu trúc
+
 ```
-./gradlew assembleDebug
+rust/                       lõi Rust (cargo test chạy được trên máy tính)
+app/src/main/java/com/example/gameturbo/
+  core/      Core.kt (JNI), KotlinCore.kt (dự phòng), SysReader.kt
+  engine/    TurboController, Sampler, Exec
+  service/   TurboService (dịch vụ nền)
+  overlay/   bong bóng, menu kính, HUD
+  ui/        giao diện Compose (Game, HUD, Nhật ký, Cài đặt, nền)
+  data/      Settings, GameRepo, Palette
+  audio/     SoundBank (âm thanh trong res/raw)
 ```
-Cần JDK 17 và Android SDK (đặt biến `ANDROID_HOME`).
-
-## Cách dùng trên điện thoại
-1. Cài **Shizuku** từ Google Play hoặc GitHub.
-2. Bật *Tuỳ chọn nhà phát triển > Gỡ lỗi không dây* (Android 11+), mở Shizuku và làm theo hướng dẫn để bấm **Start**. Phải làm lại sau mỗi lần khởi động lại máy.
-3. Mở Game Turbo, bấm **Cấp quyền**.
-4. Chọn game, chọn độ phân giải và FPS, bấm **Chơi ngay**. Nếu game đang chạy, hãy đóng hẳn rồi mở lại để thay đổi có hiệu lực.
-
-## Nếu màn hình bị lỗi sau khi đổi độ phân giải toàn màn hình
-Cắm máy vào PC và chạy:
-```
-adb shell wm size reset
-adb shell wm density reset
-```
-
-## Cấu trúc code
-- `ShellService.kt` chạy trong tiến trình Shizuku, thực thi lệnh shell.
-- `ShizukuShell.kt` quản lý kết nối, quyền và gọi lệnh.
-- `MainViewModel.kt` chứa toàn bộ logic (profile game, tuỳ chọn hệ thống, giám sát nhiệt độ).
-- `Ui.kt`, `Theme.kt`, `MainActivity.kt` là giao diện Compose.
-
-## Đổi tên package
-Hiện là `com.example.gameturbo`. Nếu muốn đổi, sửa `namespace` và `applicationId` trong `app/build.gradle.kts`, đổi tên thư mục trong `java/` và `aidl/`, rồi sửa dòng `package` ở đầu mỗi file.

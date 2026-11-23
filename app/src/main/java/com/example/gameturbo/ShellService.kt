@@ -1,6 +1,7 @@
 package com.example.gameturbo
 
 import android.content.Context
+import com.example.gameturbo.core.SysReader
 import kotlin.system.exitProcess
 
 /**
@@ -27,6 +28,14 @@ class ShellService() : IShellService.Stub() {
             "$code\n$output"
         } catch (t: Throwable) {
             "-1\n${t.javaClass.simpleName}: ${t.message}"
+        }
+    }
+
+    override fun readMany(keys: String): String {
+        return try {
+            SysReader.readMany(keys)
+        } catch (_: Throwable) {
+            ""
         }
     }
 }
